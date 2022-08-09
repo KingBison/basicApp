@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -28,13 +29,17 @@ func MongoClientGet() *mongo.Client {
 
 func MongoData(client *mongo.Client) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		err := client.Ping(ctx, nil)
-		defer cancel()
-		if err != nil {
-			rw.Write([]byte("ping failed"))
-			return
+		testdata := bson.M{
+			"title":  "The Polyglot Developer Podcast",
+			"author": "Nic Raboy",
+			"tags":   bson.A{"development", "programming", "coding"},
 		}
-		rw.Write([]byte("ping seccessful"))
+		testcoll := client.Database("testdb").Collection("test")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err := testcoll.InsertOne(ctx, testdata)
+		if err != nil {
+			panic("insert failed")
+		}
 	}
 }
