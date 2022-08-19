@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
-	"fmt"
+
 	"log"
+	"main/formatter"
+	logger "main/logger"
 	"net/http"
 	"time"
 
@@ -23,23 +25,19 @@ func MongoClientGet() *mongo.Client {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Connected to MongoDB")
+	logger.Info("Connected to Database")
 	return client
 }
 
 func MongoData(client *mongo.Client) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		testdata := bson.M{
-			"title":  "The Polyglot Developer Podcast",
-			"author": "Nic Raboy",
-			"tags":   bson.A{"development", "programming", "coding"},
-		}
-		testcoll := client.Database("testdb").Collection("test")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_, err := testcoll.InsertOne(ctx, testdata)
+		dbNames, err := client.ListDatabases(ctx, bson.D{})
 		if err != nil {
-			panic("insert failed")
+			logger.Error("Failed to get database names")
 		}
+		rtrn := formatter.FormatDBInfo(dbNames, client)
+		rw.Write([]byte(rtrn))
 	}
 }
